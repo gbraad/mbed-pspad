@@ -11,6 +11,7 @@ PS_PAD::PS_PAD (PinName mosi, PinName miso, PinName sck, PinName cs) : _spi(mosi
     _cs = 1;
     _vib1 = 0;
     _vib2 = 0;
+    _connected = false;
 }
 
 PS_PAD::PS_PAD (SPI &spi, PinName cs) : _spi(spi), _cs(cs) {
@@ -19,6 +20,7 @@ PS_PAD::PS_PAD (SPI &spi, PinName cs) : _spi(spi), _cs(cs) {
     _cs = 1;
     _vib1 = 0;
     _vib2 = 0;
+    _connected = false;
 }
 
 int PS_PAD::init () {
@@ -51,17 +53,26 @@ int PS_PAD::poll () {
     cmd[3] = _vib1;
     cmd[4] = _vib2;
     send(cmd, 9, buf);
-    if (buf[2] == 0xff) {
+    if (buf[2] != 0x5a) {
         return -1;
     }
 
     for (i = 0; i < 6; i ++) {
         _pad[i] = buf[3 + i];
     }
+    _connected = true;
     return 0;
 }
 
 int PS_PAD::read (TYPE t) {
+    if (!_connected) {
+        if (t <= BUTTONS) {
+            return 0;
+        } else {
+            return 0x80;
+        }
+    }
+
     switch (t) {
     case PAD_LEFT:
         return _pad[0] & 0x80 ? 0 : 1;
@@ -95,30 +106,16 @@ int PS_PAD::read (TYPE t) {
         return _pad[1] & 0x02 ? 0 : 1;
     case PAD_L2:
         return _pad[1] & 0x01 ? 0 : 1;
+    case BUTTONS:
+        return ~((_pad[1] << 8) | _pad[0]) & 0xffff;
     case ANALOG_RX:
-        if (_pad[2] < 0x80) {
-            return (_pad[2] - 0x7f) * 100 / 0x7f;
-        } else {
-            return (_pad[2] - 0x7f) * 100 / 0x7f;
-        }
+        return _pad[2] - 0x80;
     case ANALOG_RY:
-        if (_pad[3] < 0x80) {
-            return (_pad[3] - 0x7f) * 100 / 0x7f;
-        } else {
-            return (_pad[3] - 0x7f) * 100 / 0x7f;
-        }
+        return _pad[3] - 0x80;
     case ANALOG_LX:
-        if (_pad[4] < 0x80) {
-            return (_pad[4] - 0x7f) * 100 / 0x7f;
-        } else {
-            return (_pad[4] - 0x7f) * 100 / 0x7f;
-        }
+        return _pad[4] - 0x80;
     case ANALOG_LY:
-        if (_pad[5] < 0x80) {
-            return (_pad[5] - 0x7f) * 100 / 0x7f;
-        } else {
-            return (_pad[5] - 0x7f) * 100 / 0x7f;
-        }
+        return _pad[5] - 0x80;
     }
     return 0;
 }

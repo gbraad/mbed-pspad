@@ -24,6 +24,7 @@ public:
         PAD_L1,
         PAD_R2,
         PAD_L2,
+        BUTTONS,
         ANALOG_RX,
         ANALOG_RY,
         ANALOG_LX,
@@ -41,8 +42,9 @@ public:
 private:
     SPI _spi;
     DigitalOut _cs;
-    char _pad[6];
+    uint8_t _pad[6];
     int _vib1, _vib2;
+    bool _connected;
 
     int send (const char *cmd, int len, char *dat);
 };
